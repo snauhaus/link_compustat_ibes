@@ -53,9 +53,10 @@ def main(output_file):
 
     # Merge the two link tables
     out = link2.merge(link1, left_on='lpermno', right_on='permno')
+    out.drop_duplicates(inplace=True)
 
     # Export complete table
-    out.to_csv(output_file)
+    out.to_csv(output_file, index=False)
 
 
 if __name__ == '__main__':
