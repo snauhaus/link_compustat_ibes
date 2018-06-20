@@ -5,12 +5,16 @@ script: link_compustat_ibis.py
 author: Steffen Nauhaus
 date:   Spring 2018
 
-This script creates a mapping table between IBES and Compustat via CRSP.
+This script creates a mapping table between IBES and Compustat. 
+
+It supports the following methods:
+
+ - Link via CRSP
+ - Link via S_SECURITY
 
 Notes:
     - Output can be specified manually or via argparse
-    - Mapping IBES to CRSP using CUSIP-NCUSIP (ignoring date because it's "of little benefit" [1])
-    - Mapping CRSP to Compustat via ccmxpf_lnkhist [2]
+    - 
 
 References:
 [1] https://wrds-web.wharton.upenn.edu/wrds/support/Data/_010Linking%20Databases/_000Linking%20IBES%20and%20CRSP%20Data.cfm (WRDS tutorial on mapping IBES to CRSP)
@@ -25,7 +29,7 @@ import argparse
 import pandas as pd
 import os, sys
 
-def main(output_file):
+def main(output_file, method):
     
     # Change working directory to path of script
     # This ensures that oufile is written to script directory if its not an absolute path
@@ -33,9 +37,48 @@ def main(output_file):
     
     # Connect to wrds
     db = wrds.Connection()
+    
+    # Execute method
+    if method is None: # Nothind specifed
+        crsp_method(db, output_file)
+    elif method.upper() == 'GSEC':
+        gsec_method(db, output_file)
+    elif method.upper() == 'CRSP':
+        crsp_method(db, output_file)
+    else:
+        print("Unknown method specified:", method)
 
+def gsec_method(db, output_file):
+    """
+    This method uses the IBTIC variable from Compustat's G_SECURITY table to add the Compustat GVKEY to IBES
+    
+    See: https://wrds-web.wharton.upenn.edu/wrds/tools/variable.cfm?library_id=7&file_id=64675
+    
+    """
+    
     # Get IBES data
-    ibes = db.get_table(library='ibes', table='idsum', columns=['ticker', 'cusip'])
+    ibes = db.get_table(library='ibes', table='idsum', columns=['ticker', 'cusip', 'cname'])
+    ibes.drop_duplicates(inplace=True)
+
+    # Get G_SECURITY data
+    gsec = db.get_table(library='comp', table='security', columns=['gvkey', 'ibtic'])
+    gsec.drop_duplicates(inplace=True)
+
+    # Link G_Security and foreign CRSP
+    out = ibes.merge(gsec, left_on='ticker', right_on='ibtic')
+
+    # Export complete table
+    out.to_csv(output_file, index=False)
+
+
+def crsp_method(db, output_file):
+    """
+    This function maps cusip in IBES to ncusip in CRSP (ignoring date because it's "of little benefit" [1]). It then maps CRSP Compustat via the permno found in ccmxpf_lnkhist ([2]). The resulting linktable contains the IBES Ticker, CUSIP, company name (CNAME) and Compustat GVKEY.
+    
+    """
+    
+    # Get IBES data
+    ibes = db.get_table(library='ibes', table='idsum', columns=['ticker', 'cusip', 'cname'])
     ibes.drop_duplicates(inplace=True)
 
     # Get CRSP data
@@ -57,15 +100,16 @@ def main(output_file):
 
     # Export complete table
     out.to_csv(output_file, index=False)
-
+    
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Create link table between Compustat and IBES via CRSP. WRDS login credentials are required.')
+    parser = argparse.ArgumentParser(description='Create link table between Compustat and IBES. WRDS login credentials are required. ')
     parser.add_argument('-o', '--output', help='Output file (csv)', required=True, type=str) # Output file arg
+    parser.add_argument('-m', '--method', help='Method to use to create the link table. Options are "gsec" for the "G_SECURITY" table method, and "crsp" for the CRSP table method. Defaults to CRSP method', required=False, type=str) # Output file arg
     args = vars(parser.parse_args())
     outfile = args['output']
-    main(outfile)
-    
+    method = args['method']
+    main(outfile, method)
     
     
     
