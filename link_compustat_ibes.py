@@ -39,7 +39,7 @@ def main(output_file, method):
     db = wrds.Connection()
     
     # Execute method
-    if method is None: # Nothind specifed
+    if method is None: # Nothing specifed
         crsp_method(db, output_file)
     elif method.upper() == 'GSEC':
         gsec_method(db, output_file)

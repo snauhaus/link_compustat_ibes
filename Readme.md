@@ -10,14 +10,10 @@ Example call
 
     python3 link_compustat_ibes.py -o ~/linktable.csv
 
-This asks the script to create a link table in the user's home path.
+This asks the script to create a link table in the user's home path. It will download I/B/E/S, CRSP, and a Compustat-CRSP linktable from WRDS SQL server and merge the three tables in order to create a linktable for I/B/E/S and Compustat. This requires valid login credentials to WRDS. 
 
-Downloads I/B/E/S, CRSP, and a Compustat-CRSP linktable from WRDS SQL server to create a linktable for I/B/E/S and Compustat.
-
+The option `-m` (or `--method`) can be used to specify the method with which the two tables should be merged (see above). The script can either perform the merge via the *CRSP* key or via *G_security*. CRSP is the default. To merge via G_security, run
 
     python3 link_compustat_ibes.py -o ~/linktable2.csv -m 'gsec'
 
-This asks the script to create a link table in the user's home path.
-
-Downloads I/B/E/S and G_Security table from WRDS SQL server to create linktable2.csv for I/B/E/S ticker/cusip and Compustat's gvkey.
 
